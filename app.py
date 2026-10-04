@@ -1,4 +1,6 @@
 import io
+import os
+os.environ["TF_USE_LEGACY_KERAS"] = "1"
 import numpy as np
 from PIL import Image, ImageOps
 import streamlit as st
