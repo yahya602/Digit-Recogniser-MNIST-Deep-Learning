@@ -1,6 +1,4 @@
 import io
-import os
-os.environ["TF_USE_LEGACY_KERAS"] = "1"
 import numpy as np
 from PIL import Image, ImageOps
 import streamlit as st
@@ -12,7 +10,7 @@ st.set_page_config(
 )
 
 
-# Model Load Function (Streamlit Cache ke sath taaki har prediction pe fast chale)
+# Model Load Function
 @st.cache_resource
 def load_mnist_model():
   return tf.keras.models.load_model("mnist_model.keras")
