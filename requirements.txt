@@ -1,5 +1,5 @@
 streamlit==1.38.0
 streamlit-drawable-canvas==0.9.3
-tensorflow-cpu
-pillow
-numpy
+tensorflow-cpu==2.15.0
+pillow==10.4.0
+numpy>=1.23.5,<2.0.0
