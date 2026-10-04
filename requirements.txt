@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+tensorflow
+pillow
+numpy
+requests
+streamlit<1.39.0
+streamlit-drawable-canvas
