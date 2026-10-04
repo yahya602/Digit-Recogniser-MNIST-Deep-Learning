@@ -104,8 +104,8 @@ with tab2:
   st.subheader("Drag & Drop Image Here")
 
   uploaded_file = st.file_uploader(
-      "Drag and drop file here (PNG, JPG, JPEG)",
-      type=["png", "jpg", "jpeg"],
+      "Drag and drop file here (PNG, JPG, JPEG,WEBP)",
+      type=["png", "jpg", "jpeg","webp"],
       accept_multiple_files=False,
   )
 
