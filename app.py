@@ -13,7 +13,7 @@ st.set_page_config(
 # Model Load Function (Streamlit Cache ke sath taaki har prediction pe fast chale)
 @st.cache_resource
 def load_mnist_model():
-  return tf.keras.models.load_model("mnist_model.h5")
+  return tf.keras.models.load_model("mnist_model.h5",compile=False)
 
 
 MODEL = load_mnist_model()
