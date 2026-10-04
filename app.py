@@ -1,19 +1,57 @@
 import io
-from PIL import Image
-import requests
+import numpy as np
+from PIL import Image, ImageOps
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
+import tensorflow as tf
 
 st.set_page_config(
     page_title="MNIST Digit Recognition", page_icon="🔢", layout="centered"
 )
 
+
+# Model Load Function (Streamlit Cache ke sath taaki har prediction pe fast chale)
+@st.cache_resource
+def load_mnist_model():
+  return tf.keras.models.load_model("mnist_model.h5")
+
+
+MODEL = load_mnist_model()
+
+
+# Preprocessing Logic
+def preprocess_image(image_bytes: bytes) -> np.ndarray:
+  image = Image.open(io.BytesIO(image_bytes)).convert("L")
+
+  # Background Invert Check
+  img_array_temp = np.array(image)
+  corner_avg = (
+      img_array_temp[0, 0]
+      + img_array_temp[0, -1]
+      + img_array_temp[-1, 0]
+      + img_array_temp[-1, -1]
+  ) / 4.0
+
+  if corner_avg > 127:
+    image = ImageOps.invert(image)
+
+  # Resize to 28x28
+  image = image.resize((28, 28), Image.Resampling.BILINEAR)
+  img_array = np.array(image, dtype=np.float32) / 255.0
+
+  # Model Input Shape Handle
+  if len(MODEL.input_shape) == 2 and MODEL.input_shape[1] == 784:
+    return img_array.reshape(1, 784)
+  else:
+    return np.expand_dims(img_array, axis=0)
+
+
+# UI Layout
 st.title("🔢 MNIST Digit Recognition System")
 st.write(
-    "Draw on the canvas or **drag & drop** an image to predict using our **FastAPI + ANN Model**."
+    "Draw on the canvas or **drag & drop** an image to predict using our ANN"
+    " Model."
 )
-
-FASTAPI_URL = "http://127.0.0.1:8000/predict"
 
 tab1, tab2 = st.tabs(["✏️ Draw Digit (Canvas)", "📤 Drag & Drop / Upload Image"])
 
@@ -46,30 +84,16 @@ with tab1:
           img_byte_arr = io.BytesIO()
           img.save(img_byte_arr, format="PNG")
 
-          files = {
-              "file": (
-                  "canvas.png",
-                  img_byte_arr.getvalue(),
-                  "image/png",
-              )
-          }
+          processed_img = preprocess_image(img_byte_arr.getvalue())
+          predictions = MODEL.predict(processed_img)
+          predicted_class = int(np.argmax(predictions[0]))
+          confidence = float(np.max(predictions[0])) * 100
 
-          # Timeout hata diya hai taake prediction complete ho sake
-          response = requests.post(FASTAPI_URL, files=files)
-
-          if response.status_code == 200:
-            result = response.json()
-            st.success("Analysis Complete!")
-            st.metric(
-                label="Predicted Digit", value=str(result["predicted_digit"])
-            )
-            st.metric(
-                label="Confidence Level", value=f"{result['confidence']}%"
-            )
-          else:
-            st.error(f"API Error ({response.status_code}): {response.text}")
+          st.success("Analysis Complete!")
+          st.metric(label="Predicted Digit", value=str(predicted_class))
+          st.metric(label="Confidence Level", value=f"{round(confidence, 2)}%")
         except Exception as e:
-          st.error(f"Connection Error: {e}")
+          st.error(f"Error: {e}")
     else:
       st.warning("Pehle Canvas par koi digit draw karein!")
 
@@ -89,35 +113,21 @@ with tab2:
     col1, col2 = st.columns(2)
 
     with col1:
-      st.image(
-          uploaded_file, caption="Uploaded Image", use_column_width=True
-      )
+      st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
 
     with col2:
       if st.button("Predict Uploaded Image 🚀", key="btn_upload"):
         with st.spinner("Analyzing File..."):
           try:
-            files = {
-                "file": (
-                    uploaded_file.name,
-                    uploaded_file.getvalue(),
-                    uploaded_file.type,
-                )
-            }
+            processed_img = preprocess_image(uploaded_file.getvalue())
+            predictions = MODEL.predict(processed_img)
+            predicted_class = int(np.argmax(predictions[0]))
+            confidence = float(np.max(predictions[0])) * 100
 
-            # Timeout hata diya hai taake response aaram se receive ho sake
-            response = requests.post(FASTAPI_URL, files=files)
-
-            if response.status_code == 200:
-              result = response.json()
-              st.success("Analysis Complete!")
-              st.metric(
-                  label="Predicted Digit", value=str(result["predicted_digit"])
-              )
-              st.metric(
-                  label="Confidence Level", value=f"{result['confidence']}%"
-              )
-            else:
-              st.error(f"API Error ({response.status_code}): {response.text}")
+            st.success("Analysis Complete!")
+            st.metric(label="Predicted Digit", value=str(predicted_class))
+            st.metric(
+                label="Confidence Level", value=f"{round(confidence, 2)}%"
+            )
           except Exception as e:
-            st.error(f"Connection Error: {e}")
+            st.error(f"Error: {e}")
